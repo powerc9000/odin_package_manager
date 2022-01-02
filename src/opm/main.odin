@@ -15,6 +15,7 @@ OpmDep :: struct {
 	name:   string,
 	folder: string,
 	force:  bool,
+	after_install: DepAfterInstallProc,
 }
 
 OpmContext :: struct {
@@ -23,6 +24,7 @@ OpmContext :: struct {
 	deps:           [dynamic]OpmDep,
 }
 
+DepAfterInstallProc :: proc(ctx: ^OpmContext, dep: OpmDep, installed_path: string)
 
 BeforeEachDepProc :: proc(ctx: ^OpmContext, dep: OpmDep) -> bool
 
@@ -185,5 +187,9 @@ install_deps :: proc(ctx: ^OpmContext) {
 		gitUrl := fmt.tprintf("https://{0}.git", dep.url)
 		gitClone := fmt.tprintf("git clone --quiet --depth 1 {0} {1}", gitUrl, folder)
 		system(strings.clone_to_cstring(gitClone))
+
+		if dep.after_install != nil {
+			dep.after_install(ctx, dep, folder);
+		}
 	}
 }
