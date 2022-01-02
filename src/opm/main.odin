@@ -77,7 +77,7 @@ odin_collections_flags :: proc(ctx: ^OpmContext) -> string {
 		if folder not_in touchedFolders {
 			touchedFolders[folder] = true;
 			name := path.name(folder);
-			append(&res, fmt.tprintf("-collections:{0}={1}", name, folder));
+			append(&res, fmt.tprintf("-collection:{0}={1}", name, folder));
 		}
 	}
 
