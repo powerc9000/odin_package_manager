@@ -24,10 +24,17 @@ OpmContext :: struct {
 	deps:           [dynamic]OpmDep,
 }
 
+// Proc to be run after a single dep is installed
+// This is set per dep in `after_install`
 DepAfterInstallProc :: proc(ctx: ^OpmContext, dep: OpmDep, installed_path: string)
 
+// Proc to be run before every dep in a project
+// This is set in the `OpmContext` `before_deps`
 BeforeEachDepProc :: proc(ctx: ^OpmContext, dep: OpmDep) -> bool
 
+
+// Init an OpmContext.
+// Not doing much right now and defaults the save folder to `./packages` in the directory opm was run
 init_deps :: proc() -> OpmContext {
 	ctx: OpmContext
 	ctx.default_folder = "./packages"
@@ -35,15 +42,26 @@ init_deps :: proc() -> OpmContext {
 	return ctx
 }
 
+
+// Add a dep just by url string. 
+// folder will come from the `OpmContext` default folder
+// name will be the base name of the url passed in.
 add_dep_url :: proc(ctx: ^OpmContext, url: string) {
 	append(&ctx.deps, OpmDep {
 			url = url,
 		})
 }
 
+// Pass in an opm dep manually.
+// Use this version to set any custom things you might want like:
+// after_install hook
+// a different install folder
+// a different folder name than the default one taken from the url
+// you can also set to force install a dependency.
 add_dep_dep :: proc(ctx: ^OpmContext, dep: OpmDep) {
 	append(&ctx.deps, dep)
 }
+
 
 add_dep :: proc{add_dep_url, add_dep_dep}
 
@@ -65,7 +83,9 @@ when ODIN_OS == "darwin" {
 	}
 }
 
-
+// Get the flags to pass the collections argument to the compiler
+// Returns all distinct collections as a string for whatever use you have in mind.
+// Check demo.odin for implementation but usage might look like `odin build my thing $(opm collections)`
 odin_collections_flags :: proc(ctx: ^OpmContext) -> string {
 	res := make([dynamic]string);
 	defer delete(res);
@@ -86,6 +106,7 @@ odin_collections_flags :: proc(ctx: ^OpmContext) -> string {
 	return strings.join(res[:], " ");
 }
 
+// Removes all dependencies under `packages` folder
 clean_deps :: proc(ctx: ^OpmContext) {
 	for dep in ctx.deps {
 		depFolder := ctx.default_folder
@@ -104,6 +125,10 @@ clean_deps :: proc(ctx: ^OpmContext) {
 		}
 	}
 }
+
+// Uses git to install all dependencies listed with `add_dep`
+// If the folder for a dep already exists opm will skip installing that dep unless `force` is set in the dep struct
+// Remember to `add_dep` anything needed before running this
 install_deps :: proc(ctx: ^OpmContext) {
 	if info, err := os.stat(ctx.default_folder); err == os.ERROR_NONE {
 		if !info.is_dir {
